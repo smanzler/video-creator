@@ -1,0 +1,31 @@
+{
+  "name": "@video-creator/cli",
+  "version": "1.0.0",
+  "description": "Command line tool that cuts clips at the timestamps a video's comments point to.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "bin": {
+    "yt-clips": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "dev": "node src/cli.ts",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@video-creator/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "typescript": "^7.0.2"
+  }
+}

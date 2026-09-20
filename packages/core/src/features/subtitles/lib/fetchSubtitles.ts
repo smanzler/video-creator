@@ -19,11 +19,7 @@ export type FetchSubtitlesOptions = {
  * Gets the captions of the video, and falls back to the automatic ones.
  * Gives an empty list when the video has no captions in this language.
  */
-export const fetchSubtitles = async ({
-  videoId,
-  workDir,
-  language = "en",
-}: FetchSubtitlesOptions): Promise<Cue[]> => {
+export const fetchSubtitles = async ({ videoId, workDir, language = "en" }: FetchSubtitlesOptions): Promise<Cue[]> => {
   await run("yt-dlp", [
     "--no-playlist",
     "--skip-download",

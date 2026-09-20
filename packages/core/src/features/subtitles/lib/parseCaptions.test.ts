@@ -4,13 +4,7 @@ import test from "node:test";
 import { formatOf, parseCaptions } from "./parseCaptions.ts";
 
 test("reads a vtt body without the word timing tags", () => {
-  const body = [
-    "WEBVTT",
-    "",
-    "00:00:01.000 --> 00:00:03.500",
-    "hello <00:00:02.000><c>there</c>",
-    "",
-  ].join("\n");
+  const body = ["WEBVTT", "", "00:00:01.000 --> 00:00:03.500", "hello <00:00:02.000><c>there</c>", ""].join("\n");
   assert.deepEqual(parseCaptions(body, "vtt"), [{ start: 1, end: 3.5, text: "hello there" }]);
 });
 

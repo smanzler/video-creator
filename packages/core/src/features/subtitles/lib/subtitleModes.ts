@@ -5,6 +5,10 @@ import { writeSrt } from "./writeSrt.ts";
 
 export type SubtitleMode = "burn" | "sidecar" | "none";
 
+/** ASS `force_style` that keeps the text readable over most video. */
+export const defaultSubtitleStyle =
+  "FontName=DejaVu Sans,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H90000000,BorderStyle=3,Outline=2,Shadow=0,MarginV=40";
+
 export type SubtitleContext = {
   cues: Cue[];
   workDir: string;

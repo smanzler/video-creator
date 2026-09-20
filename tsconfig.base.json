@@ -6,9 +6,9 @@
     "moduleResolution": "nodenext",
     "types": ["node"],
 
-    "rootDir": "src",
-    "outDir": "dist",
     "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
 
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
@@ -20,6 +20,5 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
-  },
-  "include": ["src"]
+  }
 }
