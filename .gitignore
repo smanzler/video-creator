@@ -1,0 +1,6 @@
+node_modules/
+clips/
+.cache/
+*.mp4
+*.srt
+*.vtt
