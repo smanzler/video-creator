@@ -1,6 +1,31 @@
 const ENDPOINT = "https://www.googleapis.com/youtube/v3/commentThreads";
 
-const pageComments = (page) =>
+export type Comment = { text: string; likeCount: number };
+
+export type CommentOrder = "relevance" | "time";
+
+export type FetchCommentsOptions = {
+  videoId: string;
+  apiKey: string;
+  limit?: number;
+  order?: CommentOrder;
+};
+
+type CommentSnippet = {
+  textOriginal?: string;
+  textDisplay?: string;
+  likeCount?: number;
+};
+
+type CommentThreadPage = {
+  items: {
+    snippet: { topLevelComment: { snippet: CommentSnippet } };
+    replies?: { comments: { snippet: CommentSnippet }[] };
+  }[];
+  nextPageToken?: string;
+};
+
+const pageComments = (page: CommentThreadPage): Comment[] =>
   page.items.flatMap((item) => {
     const top = item.snippet.topLevelComment.snippet;
     const replies = item.replies?.comments ?? [];
@@ -11,9 +36,14 @@ const pageComments = (page) =>
   });
 
 /** Reads the newest page first; `order: "relevance"` gives the comments that YouTube ranks high. */
-export const fetchComments = async ({ videoId, apiKey, limit = 500, order = "relevance" }) => {
-  const comments = [];
-  let pageToken;
+export const fetchComments = async ({
+  videoId,
+  apiKey,
+  limit = 500,
+  order = "relevance",
+}: FetchCommentsOptions): Promise<Comment[]> => {
+  const comments: Comment[] = [];
+  let pageToken: string | undefined;
 
   while (comments.length < limit) {
     const url = new URL(ENDPOINT);
@@ -31,7 +61,7 @@ export const fetchComments = async ({ videoId, apiKey, limit = 500, order = "rel
       throw new Error(`YouTube comment API answered ${response.status}: ${body.slice(0, 500)}`);
     }
 
-    const page = await response.json();
+    const page = (await response.json()) as CommentThreadPage;
     comments.push(...pageComments(page));
     pageToken = page.nextPageToken;
     if (!pageToken) break;

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseVideoId } from "./videoId.js";
+import { parseVideoId } from "./videoId.ts";
 
 test("reads the id from every YouTube URL shape", () => {
   const id = "dQw4w9WgXcQ";

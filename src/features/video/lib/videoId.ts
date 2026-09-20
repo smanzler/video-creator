@@ -3,11 +3,11 @@ const PATH_PREFIXES = ["/embed/", "/shorts/", "/live/", "/v/"];
 const ID = /^[\w-]{11}$/;
 
 /** Takes the 11 character id out of a YouTube URL, or passes an id through. */
-export const parseVideoId = (input) => {
+export const parseVideoId = (input: string): string => {
   const value = input.trim();
   if (ID.test(value)) return value;
 
-  let url;
+  let url: URL;
   try {
     url = new URL(value);
   } catch {
@@ -24,7 +24,7 @@ export const parseVideoId = (input) => {
 
   for (const prefix of PATH_PREFIXES) {
     if (!url.pathname.startsWith(prefix)) continue;
-    const candidate = url.pathname.slice(prefix.length).split("/")[0];
+    const candidate = url.pathname.slice(prefix.length).split("/")[0] ?? "";
     if (ID.test(candidate)) return candidate;
   }
 

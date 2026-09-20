@@ -1,9 +1,15 @@
+import type { Mark } from "./parseTimestamps.ts";
+
+export type Cluster = { seconds: number; mentions: number; likes: number };
+
+export type ClusterMarksOptions = { windowSeconds?: number };
+
 /**
  * Puts marks that point at the same moment into one group.
  * @param windowSeconds Largest gap between two marks of one group.
  */
-export const clusterMarks = (marks, { windowSeconds = 10 } = {}) => {
-  const clusters = [];
+export const clusterMarks = (marks: Mark[], { windowSeconds = 10 }: ClusterMarksOptions = {}): Cluster[] => {
+  const clusters: Cluster[] = [];
 
   for (const mark of [...marks].sort((left, right) => left.seconds - right.seconds)) {
     const current = clusters.at(-1);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { clusterMarks } from "./clusterMarks.js";
+import { clusterMarks } from "./clusterMarks.ts";
 
 test("groups nearby marks and counts them", () => {
   const marks = [

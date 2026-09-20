@@ -1,7 +1,7 @@
-import { run } from "../../../lib/run.js";
+import { run } from "../../../lib/run.ts";
 
 /** Reads the length from the YouTube metadata, so the plan can be made before the download. */
-export const fetchDuration = async (videoId) => {
+export const fetchDuration = async (videoId: string): Promise<number> => {
   const { stdout } = await run("yt-dlp", [
     "--no-playlist",
     "--skip-download",
@@ -14,7 +14,7 @@ export const fetchDuration = async (videoId) => {
   return duration;
 };
 
-export const probeDuration = async (videoPath) => {
+export const probeDuration = async (videoPath: string): Promise<number> => {
   const { stdout } = await run("ffprobe", [
     "-v",
     "error",
