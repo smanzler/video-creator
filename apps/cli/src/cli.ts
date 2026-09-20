@@ -1,24 +1,18 @@
 #!/usr/bin/env node
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { clusterMarks } from "./features/comments/lib/clusterMarks.ts";
-import { collectMarks } from "./features/comments/lib/parseTimestamps.ts";
-import { fetchComments } from "./features/comments/lib/fetchComments.ts";
-import { createClips } from "./features/clips/lib/createClips.ts";
-import { planClips } from "./features/clips/lib/planClips.ts";
-import { fetchSubtitles, readCaptionFile } from "./features/subtitles/lib/fetchSubtitles.ts";
-import type { Cue } from "./features/subtitles/lib/parseCaptions.ts";
-import { isSubtitleMode, subtitleModes } from "./features/subtitles/lib/subtitleModes.ts";
-import { downloadVideo } from "./features/video/lib/downloadVideo.ts";
-import { fetchDuration } from "./features/video/lib/videoDuration.ts";
-import { parseVideoId } from "./features/video/lib/videoId.ts";
-import { requireCommands } from "./lib/run.ts";
-import { formatTimecode } from "./lib/time.ts";
-
-const DEFAULT_STYLE =
-  "FontName=DejaVu Sans,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H90000000,BorderStyle=3,Outline=2,Shadow=0,MarginV=40";
+import {
+  defaultSubtitleStyle,
+  fetchDuration,
+  findMoments,
+  formatTimecode,
+  isSubtitleMode,
+  parseVideoId,
+  renderClips,
+  requireCommands,
+  subtitleModes,
+} from "@video-creator/core";
 
 const options = {
   url: { type: "string" },
@@ -35,7 +29,7 @@ const options = {
   "subtitle-file": { type: "string" },
   language: { type: "string", default: "en" },
   quality: { type: "string", default: "1080" },
-  style: { type: "string", default: DEFAULT_STYLE },
+  style: { type: "string", default: defaultSubtitleStyle },
   "dry-run": { type: "boolean", default: false },
   help: { type: "boolean", default: false },
 } as const;
@@ -116,26 +110,23 @@ const main = async (): Promise<void> => {
   await requireCommands(cli["dry-run"] ? ["yt-dlp"] : ["yt-dlp", "ffmpeg", "ffprobe"]);
 
   const videoId = parseVideoId(target);
-  const outputDir = path.resolve(cli.out);
-  const workDir = path.resolve(cli.work);
-  await mkdir(workDir, { recursive: true });
-
   console.log(`video ${videoId}`);
+
   const videoDuration = await fetchDuration(videoId);
   console.log(`length ${formatTimecode(videoDuration)}`);
 
-  const comments = await fetchComments({ videoId, apiKey, limit: number(cli.comments, "comments") });
-  const marks = collectMarks(comments, { maxSeconds: videoDuration });
-  const clusters = clusterMarks(marks, { windowSeconds: number(cli.window, "window") });
-  console.log(`comments ${comments.length}, timestamps ${marks.length}, moments ${clusters.length}`);
-
-  const clips = planClips(clusters, {
+  const { commentCount, markCount, clusterCount, clips } = await findMoments({
+    videoId,
+    apiKey,
+    videoDuration,
+    comments: number(cli.comments, "comments"),
+    windowSeconds: number(cli.window, "window"),
     count: number(cli.count, "count"),
     lead: number(cli.lead, "lead"),
     duration: number(cli.duration, "duration"),
     minMentions: number(cli["min-mentions"], "min-mentions"),
-    videoDuration,
   });
+  console.log(`comments ${commentCount}, timestamps ${markCount}, moments ${clusterCount}`);
 
   if (clips.length === 0) {
     console.log("No moment matched. Read more comments with --comments, or lower --min-mentions.");
@@ -149,27 +140,20 @@ const main = async (): Promise<void> => {
   }
   if (cli["dry-run"]) return;
 
-  await mkdir(outputDir, { recursive: true });
-
-  const videoPath = await downloadVideo({ videoId, workDir, quality: cli.quality });
-
-  let cues: Cue[] = [];
-  if (subtitleMode !== "none") {
-    cues = cli["subtitle-file"]
-      ? await readCaptionFile(path.resolve(cli["subtitle-file"]))
-      : await fetchSubtitles({ videoId, workDir, language: cli.language });
-    if (cues.length === 0) console.log(`No ${cli.language} captions found; the clips get no subtitles.`);
-  }
-
-  const made = await createClips({
+  const outputDir = path.resolve(cli.out);
+  const made = await renderClips({
     clips,
-    videoPath,
     videoId,
-    cues,
     outputDir,
-    workDir,
+    workDir: path.resolve(cli.work),
     subtitleMode,
     subtitleStyle: cli.style,
+    subtitleFile: cli["subtitle-file"] ? path.resolve(cli["subtitle-file"]) : undefined,
+    language: cli.language,
+    quality: cli.quality,
+    onSubtitles: (cues) => {
+      if (cues.length === 0) console.log(`No ${cli.language} captions found; the clips get no subtitles.`);
+    },
     onClip: (clip) => console.log(`  wrote ${path.relative(process.cwd(), clip.outputPath)} (${clip.cueCount} cues)`),
   });
 

@@ -3,4 +3,5 @@ node_modules/
 # Output and cache of a run, at the root of the project.
 /clips/
 /.cache/
-/dist/
+dist/
+.husky/_/

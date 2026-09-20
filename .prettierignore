@@ -1,0 +1,7 @@
+# Ignore artifacts:
+dist
+clips
+.cache
+
+# deps
+pnpm-lock.yaml
