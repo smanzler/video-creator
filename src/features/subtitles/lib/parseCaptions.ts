@@ -1,15 +1,18 @@
-import { toSeconds } from "../../../lib/time.js";
+import { toSeconds } from "../../../lib/time.ts";
 
-/** @typedef {"vtt" | "srt"} CaptionFormat */
-/** @typedef {{ start: number, end: number, text: string }} Cue */
-/** @typedef {{ parse(body: string): Cue[] }} CaptionParser */
+export type CaptionFormat = "vtt" | "srt";
+
+export type Cue = { start: number; end: number; text: string };
+
+type CaptionParser = { parse(body: string): Cue[] };
 
 const CLOCK = /(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
 
-const readClock = (value) => {
+const readClock = (value: string): number | undefined => {
   const match = CLOCK.exec(value);
   if (!match) return undefined;
   const [, hours, minutes, seconds, millis] = match;
+  if (minutes === undefined || seconds === undefined || millis === undefined) return undefined;
   return toSeconds({
     hours: Number(hours ?? 0),
     minutes: Number(minutes),
@@ -19,7 +22,7 @@ const readClock = (value) => {
 };
 
 /** Removes the word timing tags and the styling tags of automatic captions. */
-const cleanText = (lines) =>
+const cleanText = (lines: string[]): string =>
   lines
     .join("\n")
     .replace(/<[^>]*>/g, "")
@@ -31,16 +34,16 @@ const cleanText = (lines) =>
     .join("\n");
 
 /** Both formats hold blocks that a `-->` line opens, so one reader serves them. */
-const parseBlocks = (body) => {
-  const cues = [];
+const parseBlocks = (body: string): Cue[] => {
+  const cues: Cue[] = [];
 
   for (const block of body.replace(/\r\n/g, "\n").split(/\n{2,}/)) {
     const lines = block.split("\n");
     const timingIndex = lines.findIndex((line) => line.includes("-->"));
     if (timingIndex === -1) continue;
 
-    const [left, right] = lines[timingIndex].split("-->");
-    const start = readClock(left);
+    const [left, right] = (lines[timingIndex] ?? "").split("-->");
+    const start = readClock(left ?? "");
     const end = readClock(right ?? "");
     if (start === undefined || end === undefined) continue;
 
@@ -51,29 +54,27 @@ const parseBlocks = (body) => {
   return cues.sort((first, second) => first.start - second.start);
 };
 
-/** @type {CaptionParser} */
-const vttParser = {
+const vttParser: CaptionParser = {
   parse: (body) => parseBlocks(body.replace(/^WEBVTT[^\n]*\n/, "")),
-};
+} satisfies CaptionParser;
 
-/** @type {CaptionParser} */
-const srtParser = {
+const srtParser: CaptionParser = {
   parse: (body) => parseBlocks(body),
-};
+} satisfies CaptionParser;
 
-/** @type {Record<CaptionFormat, CaptionParser>} */
-const captionParsers = {
+const captionParsers: Record<CaptionFormat, CaptionParser> = {
   vtt: vttParser,
   srt: srtParser,
 };
 
-export const captionFormats = Object.keys(captionParsers);
+export const captionFormats = Object.keys(captionParsers) as CaptionFormat[];
 
-export const formatOf = (filePath) => {
-  const extension = filePath.split(".").pop()?.toLowerCase();
-  if (extension && extension in captionParsers) return /** @type {CaptionFormat} */ (extension);
+export const isCaptionFormat = (value: string): value is CaptionFormat => value in captionParsers;
+
+export const formatOf = (filePath: string): CaptionFormat => {
+  const extension = filePath.split(".").pop()?.toLowerCase() ?? "";
+  if (isCaptionFormat(extension)) return extension;
   throw new Error(`No caption reader for ${filePath}`);
 };
 
-/** @param format One of `captionFormats`. */
-export const parseCaptions = (body, format) => captionParsers[format].parse(body);
+export const parseCaptions = (body: string, format: CaptionFormat): Cue[] => captionParsers[format].parse(body);

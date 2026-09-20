@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatOf, parseCaptions } from "./parseCaptions.js";
+import { formatOf, parseCaptions } from "./parseCaptions.ts";
 
 test("reads a vtt body without the word timing tags", () => {
   const body = [

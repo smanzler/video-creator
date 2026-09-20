@@ -1,6 +1,6 @@
 node_modules/
-clips/
-.cache/
-*.mp4
-*.srt
-*.vtt
+
+# Output and cache of a run, at the root of the project.
+/clips/
+/.cache/
+/dist/

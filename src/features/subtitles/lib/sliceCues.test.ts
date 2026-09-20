@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sliceCues } from "./sliceCues.js";
+import { sliceCues } from "./sliceCues.ts";
 
 test("keeps the window and moves the times to zero", () => {
   const cues = [

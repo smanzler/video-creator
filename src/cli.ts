@@ -3,18 +3,19 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { clusterMarks } from "./features/comments/lib/clusterMarks.js";
-import { collectMarks } from "./features/comments/lib/parseTimestamps.js";
-import { fetchComments } from "./features/comments/lib/fetchComments.js";
-import { createClips } from "./features/clips/lib/createClips.js";
-import { planClips } from "./features/clips/lib/planClips.js";
-import { fetchSubtitles, readCaptionFile } from "./features/subtitles/lib/fetchSubtitles.js";
-import { subtitleModes } from "./features/subtitles/lib/subtitleModes.js";
-import { downloadVideo } from "./features/video/lib/downloadVideo.js";
-import { fetchDuration } from "./features/video/lib/videoDuration.js";
-import { parseVideoId } from "./features/video/lib/videoId.js";
-import { requireCommands } from "./lib/run.js";
-import { formatTimecode } from "./lib/time.js";
+import { clusterMarks } from "./features/comments/lib/clusterMarks.ts";
+import { collectMarks } from "./features/comments/lib/parseTimestamps.ts";
+import { fetchComments } from "./features/comments/lib/fetchComments.ts";
+import { createClips } from "./features/clips/lib/createClips.ts";
+import { planClips } from "./features/clips/lib/planClips.ts";
+import { fetchSubtitles, readCaptionFile } from "./features/subtitles/lib/fetchSubtitles.ts";
+import type { Cue } from "./features/subtitles/lib/parseCaptions.ts";
+import { isSubtitleMode, subtitleModes } from "./features/subtitles/lib/subtitleModes.ts";
+import { downloadVideo } from "./features/video/lib/downloadVideo.ts";
+import { fetchDuration } from "./features/video/lib/videoDuration.ts";
+import { parseVideoId } from "./features/video/lib/videoId.ts";
+import { requireCommands } from "./lib/run.ts";
+import { formatTimecode } from "./lib/time.ts";
 
 const DEFAULT_STYLE =
   "FontName=DejaVu Sans,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H90000000,BorderStyle=3,Outline=2,Shadow=0,MarginV=40";
@@ -37,6 +38,27 @@ const options = {
   style: { type: "string", default: DEFAULT_STYLE },
   "dry-run": { type: "boolean", default: false },
   help: { type: "boolean", default: false },
+} as const;
+
+/** parseArgs fills every default, so each option that has one always holds a value. */
+type CliValues = {
+  url?: string;
+  "api-key"?: string;
+  count: string;
+  duration: string;
+  lead: string;
+  window: string;
+  "min-mentions": string;
+  comments: string;
+  out: string;
+  work: string;
+  subtitles: string;
+  "subtitle-file"?: string;
+  language: string;
+  quality: string;
+  style: string;
+  "dry-run": boolean;
+  help: boolean;
 };
 
 const usage = `
@@ -62,54 +84,56 @@ Options
   --dry-run             Show the moments, download nothing
 `;
 
-const number = (value, name) => {
+const number = (value: string, name: string): number => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) throw new Error(`--${name} needs a number, got ${value}`);
   return parsed;
 };
 
-const main = async () => {
+const main = async (): Promise<void> => {
   const { values, positionals } = parseArgs({ options, allowPositionals: true });
-  if (values.help) {
+  const cli = values as CliValues;
+  if (cli.help) {
     console.log(usage);
     return;
   }
 
-  const target = values.url ?? positionals[0];
+  const target = cli.url ?? positionals[0];
   if (!target) throw new Error(`No video given.\n${usage}`);
 
-  const apiKey = values["api-key"] ?? process.env.YOUTUBE_API_KEY;
+  const apiKey = cli["api-key"] ?? process.env["YOUTUBE_API_KEY"];
   if (!apiKey) {
     throw new Error(
       "No YouTube Data API key. Pass --api-key or set YOUTUBE_API_KEY. Make one at https://console.cloud.google.com/apis/credentials with the YouTube Data API v3 on.",
     );
   }
 
-  if (!subtitleModes.includes(values.subtitles)) {
+  if (!isSubtitleMode(cli.subtitles)) {
     throw new Error(`--subtitles must be one of: ${subtitleModes.join(", ")}`);
   }
+  const subtitleMode = cli.subtitles;
 
-  await requireCommands(values["dry-run"] ? ["yt-dlp"] : ["yt-dlp", "ffmpeg", "ffprobe"]);
+  await requireCommands(cli["dry-run"] ? ["yt-dlp"] : ["yt-dlp", "ffmpeg", "ffprobe"]);
 
   const videoId = parseVideoId(target);
-  const outputDir = path.resolve(values.out);
-  const workDir = path.resolve(values.work);
+  const outputDir = path.resolve(cli.out);
+  const workDir = path.resolve(cli.work);
   await mkdir(workDir, { recursive: true });
 
   console.log(`video ${videoId}`);
   const videoDuration = await fetchDuration(videoId);
   console.log(`length ${formatTimecode(videoDuration)}`);
 
-  const comments = await fetchComments({ videoId, apiKey, limit: number(values.comments, "comments") });
+  const comments = await fetchComments({ videoId, apiKey, limit: number(cli.comments, "comments") });
   const marks = collectMarks(comments, { maxSeconds: videoDuration });
-  const clusters = clusterMarks(marks, { windowSeconds: number(values.window, "window") });
+  const clusters = clusterMarks(marks, { windowSeconds: number(cli.window, "window") });
   console.log(`comments ${comments.length}, timestamps ${marks.length}, moments ${clusters.length}`);
 
   const clips = planClips(clusters, {
-    count: number(values.count, "count"),
-    lead: number(values.lead, "lead"),
-    duration: number(values.duration, "duration"),
-    minMentions: number(values["min-mentions"], "min-mentions"),
+    count: number(cli.count, "count"),
+    lead: number(cli.lead, "lead"),
+    duration: number(cli.duration, "duration"),
+    minMentions: number(cli["min-mentions"], "min-mentions"),
     videoDuration,
   });
 
@@ -119,20 +143,22 @@ const main = async () => {
   }
 
   for (const clip of clips) {
-    console.log(`  ${formatTimecode(clip.start)} -> ${formatTimecode(clip.end)}  ${clip.mentions} mentions, ${clip.likes} likes`);
+    console.log(
+      `  ${formatTimecode(clip.start)} -> ${formatTimecode(clip.end)}  ${clip.mentions} mentions, ${clip.likes} likes`,
+    );
   }
-  if (values["dry-run"]) return;
+  if (cli["dry-run"]) return;
 
   await mkdir(outputDir, { recursive: true });
 
-  const videoPath = await downloadVideo({ videoId, workDir, quality: values.quality });
+  const videoPath = await downloadVideo({ videoId, workDir, quality: cli.quality });
 
-  let cues = [];
-  if (values.subtitles !== "none") {
-    cues = values["subtitle-file"]
-      ? await readCaptionFile(path.resolve(values["subtitle-file"]))
-      : await fetchSubtitles({ videoId, workDir, language: values.language });
-    if (cues.length === 0) console.log(`No ${values.language} captions found; the clips get no subtitles.`);
+  let cues: Cue[] = [];
+  if (subtitleMode !== "none") {
+    cues = cli["subtitle-file"]
+      ? await readCaptionFile(path.resolve(cli["subtitle-file"]))
+      : await fetchSubtitles({ videoId, workDir, language: cli.language });
+    if (cues.length === 0) console.log(`No ${cli.language} captions found; the clips get no subtitles.`);
   }
 
   const made = await createClips({
@@ -142,15 +168,15 @@ const main = async () => {
     cues,
     outputDir,
     workDir,
-    subtitleMode: values.subtitles,
-    subtitleStyle: values.style,
+    subtitleMode,
+    subtitleStyle: cli.style,
     onClip: (clip) => console.log(`  wrote ${path.relative(process.cwd(), clip.outputPath)} (${clip.cueCount} cues)`),
   });
 
   console.log(`${made.length} clips in ${path.relative(process.cwd(), outputDir) || "."}`);
 };
 
-main().catch((error) => {
-  console.error(error.message);
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

@@ -22,16 +22,19 @@ captions stay in `.cache/`, so a second run starts at the cut step.
 
 ## Before the first run
 
-- Node 18 or later.
+- Node 22.18 or later. Node runs the TypeScript sources itself, so the only
+  build is the one that makes the `yt-clips` command.
 - `yt-dlp` and `ffmpeg` (with `ffprobe`) on the PATH.
 - A YouTube Data API v3 key: make one at
   <https://console.cloud.google.com/apis/credentials>, turn on "YouTube Data
   API v3", then `export YOUTUBE_API_KEY=...` or pass `--api-key`.
 
 ```sh
-npm install        # no dependencies, this only writes the lock file
-npm test
+npm install        # TypeScript and the Node types, nothing the tool needs at run time
+npm run build      # writes dist/, which the yt-clips command runs
 ```
+
+`npm run dev -- <url> [options]` runs the same tool straight from `src/`.
 
 ## Options
 
@@ -77,7 +80,7 @@ comments 500, timestamps 213, moments 96
 
 ```
 src/
-  cli.js
+  cli.ts
   features/
     comments/lib/   # API read, timestamp parse, grouping
     video/lib/      # id parse, download, length
@@ -85,3 +88,6 @@ src/
     clips/lib/      # plan, cut, run
   lib/              # process runner, time formats
 ```
+
+A test sits beside the file it tests. `npm test` runs them from the sources,
+and `npm run typecheck` reads the whole tree without a build.

@@ -1,10 +1,17 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { run } from "../../../lib/run.js";
+import { run } from "../../../lib/run.ts";
+
+export type DownloadVideoOptions = {
+  videoId: string;
+  workDir: string;
+  /** Largest video height. */
+  quality?: string;
+};
 
 /** Downloads once and keeps the file, so a second run of the same video starts at the cut step. */
-export const downloadVideo = async ({ videoId, workDir, quality = "1080" }) => {
+export const downloadVideo = async ({ videoId, workDir, quality = "1080" }: DownloadVideoOptions): Promise<string> => {
   const output = path.join(workDir, `${videoId}.mp4`);
   if (existsSync(output)) return output;
 

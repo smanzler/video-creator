@@ -1,8 +1,12 @@
+import type { Cue } from "./parseCaptions.ts";
+
 const MIN_LENGTH = 0.12;
 
+export type CueWindow = { start: number; end: number };
+
 /** Automatic captions repeat the last line in the next cue; keep the longest form once. */
-const dropRepeats = (cues) => {
-  const kept = [];
+const dropRepeats = (cues: Cue[]): Cue[] => {
+  const kept: Cue[] = [];
   for (const cue of cues) {
     const previous = kept.at(-1);
     if (!previous) {
@@ -23,7 +27,7 @@ const dropRepeats = (cues) => {
 };
 
 /** Keeps the cues of one window and moves their times so the window starts at 0. */
-export const sliceCues = (cues, { start, end }) =>
+export const sliceCues = (cues: Cue[], { start, end }: CueWindow): Cue[] =>
   dropRepeats(
     cues
       .filter((cue) => cue.end > start && cue.start < end)

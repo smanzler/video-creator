@@ -1,18 +1,20 @@
-import { spawn } from "node:child_process";
+import { type SpawnOptions, spawn } from "node:child_process";
 
-export const run = (command, args, options = {}) =>
+export type CommandResult = { stdout: string; stderr: string };
+
+export const run = (command: string, args: string[], options: SpawnOptions = {}): Promise<CommandResult> =>
   new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], ...options });
     let stdout = "";
     let stderr = "";
-    child.stdout?.on("data", (chunk) => {
+    child.stdout?.on("data", (chunk: Buffer) => {
       stdout += chunk;
     });
-    child.stderr?.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk: Buffer) => {
       stderr += chunk;
     });
-    child.on("error", (error) => reject(new Error(`${command} did not start: ${error.message}`)));
-    child.on("close", (code) => {
+    child.on("error", (error: Error) => reject(new Error(`${command} did not start: ${error.message}`)));
+    child.on("close", (code: number | null) => {
       if (code === 0) {
         resolve({ stdout, stderr });
         return;
@@ -21,8 +23,8 @@ export const run = (command, args, options = {}) =>
     });
   });
 
-export const requireCommands = async (commands) => {
-  const missing = [];
+export const requireCommands = async (commands: string[]): Promise<void> => {
+  const missing: string[] = [];
   for (const command of commands) {
     try {
       await run("sh", ["-c", `command -v ${command}`]);

@@ -4,14 +4,25 @@
   "description": "Cut clips from a YouTube video at the timestamps its comments point to, with subtitles.",
   "type": "module",
   "bin": {
-    "yt-clips": "src/cli.js"
+    "yt-clips": "dist/cli.js"
   },
   "scripts": {
-    "start": "node src/cli.js",
-    "test": "node --test"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "dev": "node src/cli.ts",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.18"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "typescript": "^7.0.2"
+  },
+  "files": [
+    "dist"
+  ]
 }

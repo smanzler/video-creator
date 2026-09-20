@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { collectMarks, parseTimestamps } from "./parseTimestamps.js";
+import { collectMarks, parseTimestamps } from "./parseTimestamps.ts";
 
 test("reads minute and hour timestamps", () => {
   assert.deepEqual(parseTimestamps("2:30 is great"), [150]);
